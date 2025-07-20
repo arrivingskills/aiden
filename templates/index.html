@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI answers</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        #chat-container { height: 400px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+        #user-input { width: 80%; padding: 8px; }
+        #send-button { padding: 8px 15px; }
+        .user-message { text-align: right; margin: 5px; color: blue; }
+        .bot-message { text-align: left; margin: 5px; color: green; }
+    </style>
+</head>
+<body>
+    <h1>Information you can trust</h1>
+    <div id="chat-container"></div>
+    <div>
+        <input type="text" id="user-input" placeholder="Type your message here...">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chat-container');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+
+            // Function to add a message to the chat
+            function addMessage(message, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = message;
+                messageDiv.className = isUser ? 'user-message' : 'bot-message';
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Add bot's greeting
+            addMessage("Hello. How can I help you today?", false);
+
+            // Function to send user message to server and get response
+            async function sendMessage() {
+                const message = userInput.value.trim();
+                if (message) {
+                    // Add user message to chat
+                    addMessage(message, true);
+                    userInput.value = '';
+                    
+                    try {
+                        // Send message to server
+                        const response = await fetch('/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ message: message }),
+                        });
+                        
+                        const data = await response.json();
+                        
+                        // Add bot response to chat
+                        addMessage(data.response, false);
+                    } catch (error) {
+                        console.error('Error:', error);
+                        addMessage("Sorry, there was an error processing your request.", false);
+                    }
+                }
+            }
+
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
