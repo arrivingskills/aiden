@@ -1,0 +1,42 @@
+# Kivy Requirements File
+# Install with: pip install -r kivy_requirements.txt
+
+# Core Kivy framework
+kivy>=2.1.0
+
+# Optional dependencies for enhanced functionality
+kivy[base]>=2.1.0
+
+# Development and testing tools (optional)
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Image processing (optional but recommended)
+Pillow>=9.0.0
+
+# Audio support (optional)
+# kivy[media]>=2.1.0
+
+# Platform-specific dependencies (uncomment as needed)
+
+# Windows dependencies
+# kivy_deps.glew>=0.3.0
+# kivy_deps.gstreamer>=0.3.0
+# kivy_deps.sdl2>=0.4.0
+
+# Additional useful packages for Kivy development
+numpy>=1.21.0
+requests>=2.28.0
+
+# For packaging applications
+# buildozer>=1.4.0  # For Android
+# pyinstaller>=5.0  # For desktop executables
+
+# Documentation generation (optional)
+# sphinx>=5.0.0
+# sphinx-rtd-theme>=1.0.0
+
+# Code quality tools (optional)
+# black>=22.0.0
+# flake8>=5.0.0
+# mypy>=0.991

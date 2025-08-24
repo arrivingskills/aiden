@@ -10,7 +10,11 @@ requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.0.15",
     "flask>=3.1.1",
+    "flet[all]==0.28.3",
+    "kivy>=2.3.1",
     "matplotlib>=3.10.3",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
     "seaborn>=0.13.2",
 ]
 
@@ -20,3 +24,11 @@ christine = "aiden:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "aiden",
+]
+
+[tool.uv.sources]
+aiden = { workspace = true }

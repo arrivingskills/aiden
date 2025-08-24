@@ -41,7 +41,7 @@ default_responses = [
 
 def get_response(user_input):
     user_input = user_input.lower()
-    response = ai_demo.submit_ai_query(user_input, collection)
+    response = aiden.ai_demo.submit_ai_query(user_input, collection)
     return response
 
 

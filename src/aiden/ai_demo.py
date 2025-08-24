@@ -18,10 +18,10 @@ def setup_chromadb():
 
     # Create or get a collection
     try:
-        collection = chroma_client.get_collection(name="pats_briefs")
+        collection = chroma_client.get_collection(name="aiden")
         print("Using existing collection 'example_docs'")
     except:
-        collection = chroma_client.create_collection(name="pats_briefs")
+        collection = chroma_client.create_collection(name="aiden")
         print("Created new collection 'example_docs'")
 
     return collection
@@ -32,21 +32,13 @@ def debug_load():
         "/Users/andy/ws/lessons/christine/data/clean_docs.txt", "r"
     ) as f:
         documents = f.read()
-    return [
-        document.strip()
-        for document in documents.replace("\n", " ")
-        .replace(".", ".\n")
-        .split("\n")
-        if len(document.strip()) > 0
-    ]
+    return [document.strip() for document in documents.replace("\n", " ").replace(".", ".\n").split("\n") if len(document.strip()) > 0]
 
 
 def load_chroma_data(collection):
     """Load sample data into ChromaDB collection"""
     # Sample documents for our knowledge base
-    with open(
-        "/Users/andy/ws/lessons/christine/data/clean_docs.txt", "r"
-    ) as f:
+    with open("/Users/andy/ws/lessons/christine/data/clean_docs.txt", "r") as f:
         documents = f.read()
     return [
         document.strip()
@@ -129,10 +121,10 @@ def rag_with_ollama(query, collection, num_results=2):
 
     prompt = f"""
     You are a helpful assistant that answers questions based on the following context:
-    
+
     Context:
     {context}
-    
+
     Question: {query}
     Please provide a detailed answer based only on the information in the context.
     If the context doesn't contain relevant information, say so.
