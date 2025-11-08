@@ -1,14 +1,11 @@
 from flask import Flask, render_template, request, jsonify
-import random
-import re
 import os
-from datetime import datetime
-import aiden.ai_demo
+import aiden.former.ai_demo
 
 print("Setting up ChromaDB...")
-collection = aiden.ai_demo.setup_chromadb()
+collection = aiden.former.ai_demo.setup_chromadb()
 
-aiden.ai_demo.load_chroma_data(collection)
+aiden.former.ai_demo.load_chroma_data(collection)
 print("\nEnsure Ollama is running locally with at least one model downloaded.")
 print(
     "You can start Ollama and download the llama2 model with: 'ollama run llama2'\n"
@@ -41,7 +38,7 @@ default_responses = [
 
 def get_response(user_input):
     user_input = user_input.lower()
-    response = aiden.ai_demo.submit_ai_query(user_input, collection)
+    response = aiden.former.ai_demo.submit_ai_query(user_input, collection)
     return response
 
 
