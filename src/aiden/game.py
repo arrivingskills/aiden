@@ -4,7 +4,7 @@ from panda3d.core import AmbientLight, DirectionalLight, Vec4, Vec3, ClockObject
 from direct.task import Task
 
 from gui import HUD, Dialog
-from actors import NPC, Item
+from actors import NPC, Item, Zombie
 from quests import QuestLog, Quest
 from scenes import load_environment
 
@@ -115,16 +115,25 @@ class AdventureGame(ShowBase):
 
     def _init_content(self):
         # Spawn NPC elder at center
-        elder_model = self._load_model_safe(["models/misc/smiley", "models/misc/sphere"])  # friendly face
-        elder_model.setScale(1.4)
-        elder = NPC(elder_model, name="Elder", dialog_lines=[
-            "Welcome, traveler. Our grove is broken into three shards.",
-            "Find the three Shards of the Grove and return to me.",
-            "Place them at the ancient gate to restore the path."
+        # elder_model = self._load_model_safe(["models/misc/smiley", "models/misc/sphere"])  # friendly face
+        # elder_model.setScale(1.4)
+        # elder = NPC(elder_model, name="Elder", dialog_lines=[
+        #     "Welcome, traveler. Our grove is broken into three shards.",
+        #     "Find the three Shards of the Grove and return to me.",
+        #     "Place them at the ancient gate to restore the path."
+        # ])
+        # elder.reparent_to(self.render).set_pos(0, 10, 0)
+        # elder.node.setCollideMask(self.actor_mask)
+        # self.actors['elder'] = elder
+
+        zombie_model = self._load_model_safe(["models/misc/smiley", "models/misc/sphere"])  # friendly face
+        zombie_model.setScale(1.4)
+        zombie = Zombie(zombie_model, name="Zombie", dialog_lines=[
+            "im a zombie"
         ])
-        elder.reparent_to(self.render).set_pos(0, 10, 0)
-        elder.node.setCollideMask(self.actor_mask)
-        self.actors['elder'] = elder
+        zombie.reparent_to(self.render).set_pos(0, 10, 0)
+        zombie.node.setCollideMask(self.actor_mask)
+        self.actors['zombie'] = zombie
 
         # Place three shard items around the map
         positions = [(-8, 25, 0.2), (10, 35, 0.2), (6, 18, 0.2)]

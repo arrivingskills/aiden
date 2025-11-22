@@ -1,4 +1,6 @@
 from panda3d.core import NodePath, CollisionNode, CollisionSphere
+from direct.actor.Actor import Actor
+import time
 
 
 class ActorBase:
@@ -34,3 +36,21 @@ class Item(ActorBase):
         cnode.add_solid(CollisionSphere(0, 0, 0.25, 0.5))
         self.node.attach_new_node(cnode)
         self.node.set_tag("collectible", "1")
+
+class Zombie(ActorBase):
+    def __init__(self, node: NodePath, name: str, dialog_lines=None):
+        super().__init__(node, name)
+        self.dialog_lines = dialog_lines or []
+        # collision for clicking
+        cnode = CollisionNode(f"npc-{name}")
+        cnode.add_solid(CollisionSphere(0, 0, 0.5, 1.0))
+        self.node.attach_new_node(cnode)
+        zombie = Actor('simpleEnemy.egg', {
+            'walk': 'simpleEnemy-walk.egg',
+            'attack': 'simpleEnemy-attack.egg',
+            'spawn': 'simpleEnemy-spawn.egg',
+            'die': 'simpleEnemy-die.egg',
+        })
+        zombie.play('spawn')
+        zombie.loop('attack')
+        zombie.stop()
