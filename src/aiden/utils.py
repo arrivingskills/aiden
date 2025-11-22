@@ -3,8 +3,9 @@ from panda3d.core import NodePath, Geom, GeomNode, GeomVertexData, GeomVertexFor
 
 def make_colored_triangle(name: str = "tri", color=(1, 0, 0, 1)) -> NodePath:
     """Create a tiny colored triangle as a fallback model."""
-    format = GeomVertexFormat.get_v3c4()
-    vdata = GeomVertexData(name, format, Geom.UH_static)
+    # CHANGE: Panda3D uses camelCase API for Geom/Vertex utilities
+    format = GeomVertexFormat.getV3c4()
+    vdata = GeomVertexData(name, format, Geom.UHStatic)
 
     vwriter = GeomVertexWriter(vdata, "vertex")
     cwriter = GeomVertexWriter(vdata, "color")
@@ -12,15 +13,15 @@ def make_colored_triangle(name: str = "tri", color=(1, 0, 0, 1)) -> NodePath:
     # Simple right triangle in X-Y plane
     verts = [(0, 0, 0), (0.3, 0, 0), (0, 0.3, 0)]
     for v in verts:
-        vwriter.add_data3(*v)
-        cwriter.add_data4(*color)
+        vwriter.addData3(*v)
+        cwriter.addData4(*color)
 
-    tris = GeomTriangles(Geom.UH_static)
-    tris.add_vertices(0, 1, 2)
+    tris = GeomTriangles(Geom.UHStatic)
+    tris.addVertices(0, 1, 2)
 
     geom = Geom(vdata)
-    geom.add_primitive(tris)
+    geom.addPrimitive(tris)
 
     node = GeomNode(name)
-    node.add_geom(geom)
+    node.addGeom(geom)
     return NodePath(node)

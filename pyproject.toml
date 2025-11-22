@@ -22,7 +22,8 @@ dependencies = [
 ]
 
 [project.scripts]
-christine = "aiden:main"
+# CHANGE: fix console entry point to reference the actual main function
+christine = "aiden.main:main"
 
 [build-system]
 requires = ["hatchling"]
