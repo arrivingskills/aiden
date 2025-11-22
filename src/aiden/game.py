@@ -39,7 +39,7 @@ class AdventureGame(ShowBase):
         # CHANGE: add zombie/spawn/death state
         self.zombies = []
         now = time.time()
-        self.next_zombie_spawn_at = now + 60.0 + random.uniform(0.0, 30.0)  # no more frequent than 1 min
+        self.next_zombie_spawn_at = now + 1.0 + random.uniform(0.0, 5.0)  # no more frequent than 1 min
         self.player_alive = True
         self.respawn_deadline = None
         self.respawn_delay = 5.0
@@ -74,7 +74,7 @@ class AdventureGame(ShowBase):
     # --- setup helpers ---
     def _setup_window(self):
         props = WindowProperties()
-        props.setTitle("Shards of the Grove - A Small Adventure")
+        props.setTitle("z")
         self.win.requestProperties(props)
 
     def _setup_lighting(self):
