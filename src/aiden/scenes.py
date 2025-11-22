@@ -26,8 +26,9 @@ def load_environment(loader) -> NodePath:
         root = NodePath("fallback-world")
         for i in range(10):
             tri = make_colored_triangle(color=(0.2 * (i % 5), 0.5, 1.0 - 0.1 * i, 1))
-            tri.set_pos((i % 5) * 3, 10 + i * 2, 0)
-            tri.reparent_to(root)
+            # CHANGE: NodePath uses camelCase methods
+            tri.setPos((i % 5) * 3, 10 + i * 2, 0)
+            tri.reparentTo(root)
         # Ground plane for fallback as well
         _attach_flat_ground_plane(root)
         return root

@@ -2,11 +2,13 @@ from direct.showbase.ShowBase import ShowBase
 from panda3d.core import WindowProperties, CollisionTraverser, CollisionNode, CollisionRay, CollisionHandlerQueue, BitMask32
 from panda3d.core import AmbientLight, DirectionalLight, Vec4, Vec3, ClockObject
 from direct.task import Task
+import random  # CHANGE: used for random zombie spawn timing/locations
+import time    # CHANGE: used for respawn timers and scheduling
 
-from gui import HUD, Dialog
-from actors import NPC, Item, Zombie
-from quests import QuestLog, Quest
-from scenes import load_environment
+from .gui import HUD, Dialog
+from .actors import NPC, Item, Zombie
+from .quests import QuestLog, Quest
+from .scenes import load_environment
 
 
 class AdventureGame(ShowBase):
@@ -34,6 +36,15 @@ class AdventureGame(ShowBase):
         self.inventory = []
         self.actors = {}
 
+        # CHANGE: add zombie/spawn/death state
+        self.zombies = []
+        now = time.time()
+        self.next_zombie_spawn_at = now + 60.0 + random.uniform(0.0, 30.0)  # no more frequent than 1 min
+        self.player_alive = True
+        self.respawn_deadline = None
+        self.respawn_delay = 5.0
+        self.player_spawn_point = Vec3(0, -20, 0)
+
         # Quests
         self.quests = QuestLog()
         self._init_content()
@@ -47,7 +58,7 @@ class AdventureGame(ShowBase):
         self.pitch = 0.0
 
         self.player = self.render.attachNewNode('player')
-        self.player.setPos(0, -20, 0)
+        self.player.setPos(self.player_spawn_point)
         self.player.setHpr(0, 0, 0)
 
         # Reparent camera to player and set fixed eye height
@@ -93,7 +104,9 @@ class AdventureGame(ShowBase):
         self.pq = CollisionHandlerQueue()
         self.picker_node = CollisionNode('mouseRay')
         self.picker_np = self.camera.attachNewNode(self.picker_node)
+        # Ray should only be a FROM object on mask bit 1 and never be hittable
         self.picker_node.setFromCollideMask(BitMask32.bit(1))
+        self.picker_node.setIntoCollideMask(BitMask32.allOff())
         self.picker_ray = CollisionRay()
         self.picker_node.addSolid(self.picker_ray)
         self.picker.addCollider(self.picker_np, self.pq)
@@ -106,7 +119,9 @@ class AdventureGame(ShowBase):
         self.ground_trav = CollisionTraverser()
         self.ground_queue = CollisionHandlerQueue()
         self.ground_node = CollisionNode('groundRay')
+        # Grounding ray casts against ground (bit 2) and must not be hittable
         self.ground_node.setFromCollideMask(BitMask32.bit(2))
+        self.ground_node.setIntoCollideMask(BitMask32.allOff())
         # Attach to player so origin follows player; cast from above head downwards
         self.ground_np = self.player.attachNewNode(self.ground_node)
         self.ground_ray = CollisionRay(0, 0, 10.0, 0, 0, -1)
@@ -126,14 +141,10 @@ class AdventureGame(ShowBase):
         # elder.node.setCollideMask(self.actor_mask)
         # self.actors['elder'] = elder
 
-        zombie_model = self._load_model_safe(["models/misc/smiley", "models/misc/sphere"])  # friendly face
-        zombie_model.setScale(1.4)
-        zombie = Zombie(zombie_model, name="Zombie", dialog_lines=[
-            "im a zombie"
-        ])
-        zombie.reparent_to(self.render).set_pos(0, 10, 0)
-        zombie.node.setCollideMask(self.actor_mask)
-        self.actors['zombie'] = zombie
+        # CHANGE: remove the always-on starting zombie; zombies now spawn at random
+        # intervals via the runtime update (see _maybe_spawn_zombie). Keeping the
+        # pre-placed zombie would violate the "at random" intent and complicate
+        # the cooldown rule, so we rely on the spawner exclusively.
 
         # Place three shard items around the map
         positions = [(-8, 25, 0.2), (10, 35, 0.2), (6, 18, 0.2)]
@@ -163,19 +174,25 @@ class AdventureGame(ShowBase):
     def _update(self, task: Task):
         dt = ClockObject.getGlobalClock().getDt()
         self._update_camera(dt)
+        # CHANGE: update zombie system and handle spawn/death/respawn
+        self._maybe_spawn_zombie()
+        self._update_zombies(dt)
+        self._update_respawn()
         return Task.cont
 
     def _update_camera(self, dt: float):
         speed = 18.0 * (1.6 if self.keys.get("shift") else 1.0)
         mov = Vec3(0, 0, 0)
-        if self.keys["w"]:
-            mov.y += speed * dt
-        if self.keys["s"]:
-            mov.y -= speed * dt
-        if self.keys["a"]:
-            mov.x -= speed * dt
-        if self.keys["d"]:
-            mov.x += speed * dt
+        # CHANGE: disable movement while dead
+        if self.player_alive:
+            if self.keys["w"]:
+                mov.y += speed * dt
+            if self.keys["s"]:
+                mov.y -= speed * dt
+            if self.keys["a"]:
+                mov.x -= speed * dt
+            if self.keys["d"]:
+                mov.x += speed * dt
 
         # Move relative to the player (yaw only), keep height steady
         self.player.setPos(self.player, mov)
@@ -215,6 +232,89 @@ class AdventureGame(ShowBase):
                 self.camera.setR(0)
 
                 self.win.movePointer(0, cx, cy)
+
+    # --- zombie system ---
+    def _spawn_zombie_at(self, pos: Vec3):
+        """CHANGE: spawn a zombie Node at a specific world position."""
+        model = self._load_model_safe(["models/misc/smiley", "models/misc/sphere"])  # fallback if Actor fails
+        model.setScale(1.2)
+        z = Zombie(model, name=f"Zombie{len(self.zombies)+1}")
+        z.reparent_to(self.render).set_pos(pos)
+        z.node.setCollideMask(self.actor_mask)
+        self.zombies.append(z)
+
+    def _random_spawn_position(self) -> Vec3:
+        """CHANGE: choose a random position in a ring around the player so they
+        converge from outside the immediate view. Use simple trig to rotate."""
+        r = random.uniform(25.0, 45.0)
+        ang_deg = random.uniform(0.0, 360.0)
+        import math
+        ang = math.radians(ang_deg)
+        dx = r * math.cos(ang)
+        dy = r * math.sin(ang)
+        base_pos = self.player.getPos(self.render)
+        return Vec3(base_pos.x + dx, base_pos.y + dy, 0.0)
+
+    def _maybe_spawn_zombie(self):
+        """CHANGE: spawn at random intervals but never more frequent than once per minute."""
+        now = time.time()
+        if now >= self.next_zombie_spawn_at:
+            self._spawn_zombie_at(self._random_spawn_position())
+            # schedule next: at least 60s plus a random offset
+            self.next_zombie_spawn_at = now + 60.0 + random.uniform(0.0, 30.0)
+
+    def _update_zombies(self, dt: float):
+        """CHANGE: make all zombies converge on the player and handle contact kill."""
+        if not self.zombies:
+            return
+        player_pos = self.player.getPos(self.render)
+        for z in self.zombies:
+            if not self.player_alive:
+                z.set_walking(False)
+                continue
+            zpos = z.node.getPos(self.render)
+            to_player = player_pos - zpos
+            to_player.z = 0.0
+            dist = to_player.length()
+            if dist > 0.01:
+                dir_vec = to_player / dist
+                move = dir_vec * z.speed * dt
+                z.node.setPos(self.render, zpos + move)
+                # face the player
+                try:
+                    z.node.lookAt(self.player)
+                except Exception:
+                    pass
+                z.set_walking(True)
+            else:
+                z.set_walking(False)
+
+            # contact check (simple radius overlap)
+            if self.player_alive and dist < 1.0:
+                self._on_player_killed()
+
+    def _on_player_killed(self):
+        """CHANGE: handle player death and schedule a 5-second respawn."""
+        if not self.player_alive:
+            return
+        self.player_alive = False
+        self.respawn_deadline = time.time() + self.respawn_delay
+        self.hud.show_info("You were caught by a zombie! Respawning in 5 seconds...")
+
+    def _update_respawn(self):
+        """CHANGE: respawn the player after the delay."""
+        if self.player_alive or self.respawn_deadline is None:
+            return
+        if time.time() >= self.respawn_deadline:
+            # reset player state and position
+            self.player.setPos(self.player_spawn_point)
+            self.player.setHpr(0, 0, 0)
+            self.yaw = 0.0
+            self.pitch = 0.0
+            # ensure grounded height will update next frame
+            self.player_alive = True
+            self.respawn_deadline = None
+            self.hud.show_info("You have respawned. Run!")
 
     def _on_click(self):
         if not self.mouseWatcherNode.hasMouse():
