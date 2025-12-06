@@ -45,6 +45,11 @@ class AdventureGame(ShowBase):
         self.respawn_delay = 5.0
         self.player_spawn_point = Vec3(0, -20, 0)
 
+        # Player attack config
+        self.attack_damage = 34           # damage per click
+        self.attack_cooldown = 0.35       # seconds
+        self._last_attack_time = 0.0
+
         # Quests
         self.quests = QuestLog()
         self._init_content()
@@ -270,6 +275,15 @@ class AdventureGame(ShowBase):
             return
         player_pos = self.player.getPos(self.render)
         for z in self.zombies:
+            # Skip dead or already detached zombies
+            try:
+                if not getattr(z, 'alive', True):
+                    z.set_walking(False)
+                    continue
+                if z.node.isEmpty():
+                    continue
+            except Exception:
+                continue
             if not self.player_alive:
                 z.set_walking(False)
                 continue
@@ -291,8 +305,14 @@ class AdventureGame(ShowBase):
                 z.set_walking(False)
 
             # contact check (simple radius overlap)
-            if self.player_alive and dist < 1.0:
+            if self.player_alive and getattr(z, 'alive', True) and dist < 1.0:
                 self._on_player_killed()
+
+        # Compact zombie list to keep only live, attached ones
+        try:
+            self.zombies = [z for z in self.zombies if getattr(z, 'alive', True) and not z.node.isEmpty()]
+        except Exception:
+            pass
 
     def _on_player_killed(self):
         """CHANGE: handle player death and schedule a 5-second respawn."""
@@ -336,6 +356,14 @@ class AdventureGame(ShowBase):
     def _handle_pick(self, np):
         if np.isEmpty():
             return
+        # Attack zombies by clicking them (left mouse)
+        if self.player_alive:
+            znode = np.findNetTag('zombie')
+            if not znode.isEmpty():
+                z = self._find_zombie_by_nodepath(np)
+                if z is not None:
+                    self._attack_zombie(z)
+                    return
         if np.getNetTag('actor') == 'Elder':
             self._talk_elder()
             return
@@ -345,6 +373,73 @@ class AdventureGame(ShowBase):
         if np.getNetTag('gate') == '1' or np.getTag('gate') == '1':
             self._try_restore_gate()
             return
+
+    # --- combat helpers ---
+    def _find_zombie_by_nodepath(self, np):
+        """Given a NodePath from picking, return the Zombie instance if any."""
+        try:
+            znode = np.findNetTag('zombie')
+            if znode.isEmpty():
+                return None
+            # Try direct NodePath identity or key
+            for z in list(self.zombies):
+                try:
+                    if znode == z.node or znode.getKey() == z.node.getKey():
+                        return z
+                except Exception:
+                    pass
+            # Fallback: name match
+            for z in list(self.zombies):
+                try:
+                    if znode.getName() == z.node.getName():
+                        return z
+                except Exception:
+                    pass
+        except Exception:
+            return None
+        return None
+
+    def _attack_zombie(self, z):
+        now = time.time()
+        if (now - self._last_attack_time) < self.attack_cooldown:
+            return
+        self._last_attack_time = now
+        if not z or not getattr(z, 'alive', True):
+            return
+        try:
+            remaining = z.take_damage(self.attack_damage)
+        except Exception:
+            return
+        try:
+            self.hud.show_info(f"Hit {getattr(z, 'name', 'Zombie')}! HP: {remaining}/{getattr(z, 'max_health', remaining)}")
+        except Exception:
+            pass
+        if not getattr(z, 'alive', True):
+            # Stop moving immediately
+            try:
+                z.set_walking(False)
+            except Exception:
+                pass
+            # Cleanup after short delay to allow die animation
+            def _cleanup(task):
+                try:
+                    z.node.detachNode()
+                except Exception:
+                    pass
+                try:
+                    if z in self.zombies:
+                        self.zombies.remove(z)
+                except Exception:
+                    pass
+                try:
+                    self.hud.show_info(f"{getattr(z, 'name', 'Zombie')} defeated!")
+                except Exception:
+                    pass
+                return Task.done
+            try:
+                self.taskMgr.doMethodLater(0.6, _cleanup, f"cleanup-{getattr(z, 'name', 'zombie')}")
+            except Exception:
+                _cleanup(None)
 
     # --- interactions ---
     def _talk_elder(self):
