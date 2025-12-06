@@ -92,9 +92,23 @@ class Zombie(ActorBase):
             self.actor.reparentTo(self.node)
             self.actor.setScale(0.8)
             self.actor.loop('stand')
+            # CHANGE: give the simpleEnemy a zombie-like look by tinting the
+            # model a desaturated green. This avoids needing new texture files
+            # while achieving the visual intent.
+            try:
+                # ColorScale multiplies existing textures, preserving shading.
+                self.actor.setColorScale(0.6, 0.8, 0.6, 1.0)
+            except Exception:
+                pass
         except Exception:
             # If Actor assets fail to load, silently ignore; a plain model can be used instead.
             self.actor = None
+            # Apply the same zombie-like tint to the fallback primitive node so
+            # it still reads as a zombie visually.
+            try:
+                self.node.setColorScale(0.6, 0.8, 0.6, 1.0)
+            except Exception:
+                pass
 
         # CHANGE: simple movement parameters used by the game loop to make
         # zombies converge on the player.
