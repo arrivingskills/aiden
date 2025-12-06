@@ -9,8 +9,8 @@ from .gui import HUD, Dialog
 from .actors import NPC, Item, Zombie
 from .quests import QuestLog, Quest
 from .scenes import load_environment
-
-
+#ZOMBIE_RESPAWN_INTERVAL = 60.0 + random.uniform(0.0, 30.0)
+ZOMBIE_RESPAWN_INTERVAL = 20
 class AdventureGame(ShowBase):
     def __init__(self):
         super().__init__()
@@ -39,7 +39,7 @@ class AdventureGame(ShowBase):
         # CHANGE: add zombie/spawn/death state
         self.zombies = []
         now = time.time()
-        self.next_zombie_spawn_at = now + 60.0 + random.uniform(0.0, 30.0)  # no more frequent than 1 min
+        self.next_zombie_spawn_at = now + ZOMBIE_RESPAWN_INTERVAL  # no more frequent than 1 min
         self.player_alive = True
         self.respawn_deadline = None
         self.respawn_delay = 5.0
@@ -175,9 +175,10 @@ class AdventureGame(ShowBase):
         dt = ClockObject.getGlobalClock().getDt()
         self._update_camera(dt)
         # CHANGE: update zombie system and handle spawn/death/respawn
-        self._maybe_spawn_zombie()
-        self._update_zombies(dt)
-        self._update_respawn()
+        for _ in range(random.randrange(1, 5)):
+            self._maybe_spawn_zombie()
+            self._update_zombies(dt)
+            self._update_respawn()
         return Task.cont
 
     def _update_camera(self, dt: float):
@@ -261,7 +262,7 @@ class AdventureGame(ShowBase):
         if now >= self.next_zombie_spawn_at:
             self._spawn_zombie_at(self._random_spawn_position())
             # schedule next: at least 60s plus a random offset
-            self.next_zombie_spawn_at = now + 60.0 + random.uniform(0.0, 30.0)
+            self.next_zombie_spawn_at = now + ZOMBIE_RESPAWN_INTERVAL
 
     def _update_zombies(self, dt: float):
         """CHANGE: make all zombies converge on the player and handle contact kill."""
