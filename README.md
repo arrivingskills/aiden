@@ -1,3 +1,5 @@
+https://docs.panda3d.org/1.10/python/pipeline/egg-files/index
+
 Aiden Project
 
 This repository includes assorted demos. It now also includes a small, structured Panda3D adventure game.

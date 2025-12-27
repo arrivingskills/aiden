@@ -1,10 +1,18 @@
-from panda3d.core import NodePath, CollisionNode, CollisionPlane, Plane, BitMask32, Vec3, Point3
-from utils import make_colored_triangle
+from panda3d.core import (
+    NodePath,
+    CollisionNode,
+    CollisionPlane,
+    Plane,
+    BitMask32,
+    Vec3,
+    Point3,
+)
+from .utils import make_colored_triangle
 
 
 def _attach_flat_ground_plane(root: NodePath):
     """Attach an invisible collision plane at z=0 for grounding fallback (mask bit 2)."""
-    cnode = CollisionNode('ground-plane')
+    cnode = CollisionNode("ground-plane")
     plane = CollisionPlane(Plane(Vec3(0, 0, 1), Point3(0, 0, 0)))
     cnode.addSolid(plane)
     cnode.setIntoCollideMask(BitMask32.bit(2))

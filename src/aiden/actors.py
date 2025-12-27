@@ -69,6 +69,12 @@ class Zombie(ActorBase):
     def __init__(self, node: NodePath, name: str, dialog_lines=None):
         super().__init__(node, name)
         self.dialog_lines = dialog_lines or []
+        # Tag for easy identification during picking
+        self.node.setTag("zombie", "1")
+        # Basic health/state
+        self.max_health = 100
+        self.health = self.max_health
+        self.alive = True
         # CHANGE: add a simple click-collision and attach a skinned model Actor to this node
         # so the zombie is visible and can animate.
         cnode = CollisionNode(f"npc-{name}")
@@ -92,9 +98,23 @@ class Zombie(ActorBase):
             self.actor.reparentTo(self.node)
             self.actor.setScale(0.8)
             self.actor.loop('stand')
+            # CHANGE: give the simpleEnemy a zombie-like look by tinting the
+            # model a desaturated green. This avoids needing new texture files
+            # while achieving the visual intent.
+            try:
+                # ColorScale multiplies existing textures, preserving shading.
+                self.actor.setColorScale(0.6, 0.8, 0.6, 1.0)
+            except Exception:
+                pass
         except Exception:
             # If Actor assets fail to load, silently ignore; a plain model can be used instead.
             self.actor = None
+            # Apply the same zombie-like tint to the fallback primitive node so
+            # it still reads as a zombie visually.
+            try:
+                self.node.setColorScale(0.6, 0.8, 0.6, 1.0)
+            except Exception:
+                pass
 
         # CHANGE: simple movement parameters used by the game loop to make
         # zombies converge on the player.
@@ -111,5 +131,29 @@ class Zombie(ActorBase):
             else:
                 if self.actor.getCurrentAnim() != 'stand':
                     self.actor.loop('stand')
+        except Exception:
+            pass
+
+    # --- combat helpers ---
+    def take_damage(self, amount: int) -> int:
+        """Apply damage and return remaining health. If reaches zero, mark dead."""
+        if not self.alive:
+            return self.health
+        self.health = max(0, self.health - int(amount))
+        if self.health == 0:
+            self.die()
+        return self.health
+
+    def die(self):
+        if not self.alive:
+            return
+        self.alive = False
+        try:
+            if getattr(self, 'actor', None):
+                # play a die animation if available; otherwise stop anims
+                try:
+                    self.actor.play('die')
+                except Exception:
+                    self.actor.stop()
         except Exception:
             pass
