@@ -91,7 +91,7 @@ class AdventureGame(ShowBase):
     # --- setup helpers ---
     def _setup_window(self):
         props = WindowProperties()
-        props.setTitle("Shards of the Grove - A Small Adventure")
+        props.setTitle("z")
         self.win.requestProperties(props)
 
     def _setup_lighting(self):
